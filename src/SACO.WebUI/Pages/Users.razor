@@ -1,10 +1,8 @@
 @page "/usuarios"
-@using MediatR
-@using SACO.Application.Features.Users.Commands.DisableUser
 @using SACO.Application.Features.Users.DTOs
-@using SACO.Application.Features.Users.Queries.GetAllUsers
 @using SACO.WebUI.Components.Users
-@inject ISender Sender
+@using SACO.WebUI.Services
+@inject UserApiClient ApiClient
 @inject IDialogService DialogService
 
 <RoleGuard RolesPermitidos="Supervisor">
@@ -51,14 +49,14 @@
             Descending = state.SortDirection == SortDirection.Descending
         };
 
-        var result = await Sender.Send(new GetAllUsersQuery(filter), cancellationToken);
-        if (!result.IsSuccess)
+        var result = await ApiClient.GetUsersAsync(filter);
+        if (result is null)
             return new TableData<UserDto> { TotalItems = 0, Items = [] };
 
         return new TableData<UserDto>
         {
-            TotalItems = result.Value.TotalCount,
-            Items = result.Value.Items
+            TotalItems = result.TotalCount,
+            Items = result.Items
         };
     }
 
@@ -95,7 +93,7 @@
 
     private async Task DeactivateUser(Guid id)
     {
-        await Sender.Send(new DisableUserCommand(id));
+        await ApiClient.DisableUserAsync(id);
         await ReloadTable();
     }
 
