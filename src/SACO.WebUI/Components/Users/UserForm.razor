@@ -2,29 +2,37 @@
 @using SACO.Application.Features.Users.Commands.CreateUser
 @using SACO.Application.Features.Users.Commands.UpdateUser
 @using SACO.Application.Features.Users.DTOs
+@inject ISender Sender
+
 <MudDialog>
     <DialogContent>
         <MudText Typo="Typo.h6">@(EditMode ? "Editar Usuario" : "Nuevo Usuario")</MudText>
         <MudDivider Class="my-2" />
 
-        <MudForm @ref="_form" Validated="OnValidated">
+        <MudForm @ref="_form">
             <MudTextField @bind-Value="User.UserName" Label="Usuario" Required="true" For="@(() => User.UserName)" />
+
             @if (!EditMode)
             {
                 <MudTextField @bind-Value="User.Password" Label="Contraseña" InputType="InputType.Password" Required="true" For="@(() => User.Password)" />
             }
 
             <MudSelect T="string" Label="Rol" @bind-Value="User.Rol" Required="true">
-                @foreach(var rol in new[] { "Supervisor", "Inspector", "Operador" })
+                @foreach (var rol in new[] { "Supervisor", "Inspector", "Operador" })
                 {
                     <MudSelectItem Value="@rol">@rol</MudSelectItem>
                 }
             </MudSelect>
         </MudForm>
+
+        @if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <MudAlert Severity="Severity.Error" Elevation="0" Class="mt-2">@_error</MudAlert>
+        }
     </DialogContent>
 
     <DialogActions>
-        <MudButton OnClick="Save" Disabled="@(!_form.IsValid)" Color="Color.Primary">@(EditMode ? "Actualizar" : "Crear")</MudButton>
+        <MudButton OnClick="Save" Color="Color.Primary">@(EditMode ? "Actualizar" : "Crear")</MudButton>
         <MudButton OnClick="Cancel" Color="Color.Secondary">Cancelar</MudButton>
     </DialogActions>
 </MudDialog>
@@ -33,24 +41,35 @@
     [CascadingParameter] IMudDialogInstance Dialog { get; set; } = default!;
     [Parameter] public UserDto User { get; set; } = new();
     [Parameter] public bool EditMode { get; set; }
-    [Inject] ISender Sender { get; set; } = default!;
 
     private MudForm _form = new();
-
-    private async void OnValidated()
-    {
-        // Se activa cuando el formulario pasa validación
-    }
+    private string? _error;
 
     private async Task Save()
     {
+        _error = null;
+
+        await _form.Validate();
+        if (!_form.IsValid)
+            return;
+
         if (EditMode)
         {
-            await Sender.Send(new UpdateUserCommand(User.Id, User.UserName, User.Rol));
+            var result = await Sender.Send(new UpdateUserCommand(User.Id, User.UserName, User.Rol));
+            if (!result.IsSuccess)
+            {
+                _error = result.Error.Message;
+                return;
+            }
         }
         else
         {
-            await Sender.Send(new CreateUserCommand(User.UserName, User.Password, User.Rol));
+            var result = await Sender.Send(new CreateUserCommand(User.UserName, User.Password, User.Rol));
+            if (!result.IsSuccess)
+            {
+                _error = result.Error.Message;
+                return;
+            }
         }
 
         Dialog.Close(DialogResult.Ok(true));
