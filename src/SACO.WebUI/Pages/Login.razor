@@ -1,0 +1,34 @@
+@page "/login"
+@using MediatR
+@using SACO.Application.Features.Users.Commands.Login
+@inject IUserContext UserContext
+@inject NavigationManager NavigationManager
+@inject ISender Sender
+
+<MudPaper Class="pa-4 mx-auto mt-12" MaxWidth="400px">
+    <MudText Typo="Typo.h5">Iniciar sesión</MudText>
+
+    <MudTextField @bind-Value="_userName" Label="Correo" Required="true" />
+    <MudTextField @bind-Value="_password" Label="Contraseña" InputType="InputType.Password" Required="true" />
+
+    <MudButton OnClick="Authenticate" Variant="Variant.Filled" Color="Color.Primary" Class="mt-4">Ingresar</MudButton>
+</MudPaper>
+
+@code {
+    private string _userName = string.Empty;
+    private string _password = string.Empty;
+
+    private async Task Authenticate()
+    {
+        var result = await Sender.Send(request: new LoginCommand(_userName, _password));
+
+        if (result.IsFailure)
+        {
+            // Mostrar error con MudSnackbar
+            return;
+        }
+
+        UserContext.SetUser(result.Value);
+        NavigationManager.NavigateTo("/");
+    }
+}

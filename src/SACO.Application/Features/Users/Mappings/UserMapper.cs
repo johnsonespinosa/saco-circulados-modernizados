@@ -5,11 +5,10 @@ namespace SACO.Application.Features.Users.Mappings;
 public static class UserMapper
 {
     public static UserDto ToDto(this Domain.Entities.User user) =>
-        new()
+        new UserDto
         {
             Id = user.Id,
             UserName = user.UserName,
-            PasswordHash = user.PasswordHash,
             Rol = user.Rol.ToString(),
             Status = user.Status.ToString()
         };

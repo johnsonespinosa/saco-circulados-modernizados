@@ -1,0 +1,11 @@
+@page "/logout"
+@inject IUserContext UserContext
+@inject NavigationManager NavigationManager
+
+@code {
+    protected override void OnInitialized()
+    {
+        UserContext.CloseSession();
+        NavigationManager.NavigateTo(uri: "/login", forceLoad: true);
+    }
+}
