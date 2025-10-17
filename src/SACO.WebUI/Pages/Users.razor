@@ -1,16 +1,22 @@
 @page "/usuarios"
 @using MediatR
+@using SACO.Application.Features.Users.Commands.DisableUser
 @using SACO.Application.Features.Users.DTOs
+@using SACO.Application.Features.Users.Queries.GetAllUsers
+@using SACO.WebUI.Components.Users
 @inject ISender Sender
+@inject IDialogService DialogService
 
 <RoleGuard RolesPermitidos="Supervisor">
     <MudPaper Class="pa-4">
         <MudText Typo="Typo.h5">Gestión de Usuarios</MudText>
         <MudDivider Class="my-2" />
 
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AbrirDialogoNuevoUsuario">Nuevo Usuario</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenNewUser">Nuevo Usuario</MudButton>
 
-        <MudTable Items="_usuarios" Hover="true" Dense="true" Class="mt-4">
+        <MudTextField @bind-Value="_search" Placeholder="Buscar usuario..." Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Class="mt-4 mb-2" Immediate="true" OnBlur="ReloadTable" />
+
+        <MudTable @ref="_table" ServerData="LoadServerData" Hover="true" Dense="true" Class="mt-2" RowsPerPage="10">
             <HeaderContent>
                 <MudTh>Usuario</MudTh>
                 <MudTh>Rol</MudTh>
@@ -22,34 +28,80 @@
                 <MudTd>@context.Rol</MudTd>
                 <MudTd>@context.Status</MudTd>
                 <MudTd>
-                    <MudIconButton Icon="@Icons.Material.Filled.Edit" OnClick="@(() => EditarUsuario(context))" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DesactivarUsuario(context.Id))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" OnClick="@(() => OpenUserEdition(context))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DeactivateUser(context.Id))" />
                 </MudTd>
             </RowTemplate>
         </MudTable>
     </MudPaper>
-
-    <MudDialog @bind-IsVisible="_dialogVisible">
-        <!-- Aquí irá el formulario de creación/edición -->
-    </MudDialog>
 </RoleGuard>
 
 @code {
-    private List<UserDto> _usuarios = new();
-    private bool _dialogVisible = false;
+    private string? _search;
+    private MudTable<UserDto>? _table;
 
-    protected override async Task OnInitializedAsync()
+    private async Task<TableData<UserDto>> LoadServerData(TableState state, CancellationToken cancellationToken)
     {
-        var result = await Sender.Send(new GetAllUsersQuery());
-        if (result.IsSuccess)
-            _usuarios = result.Value;
+        var filter = new UserFilterDto
+        {
+            Search = _search,
+            Page = state.Page + 1,
+            PageSize = state.PageSize,
+            SortBy = state.SortLabel,
+            Descending = state.SortDirection == SortDirection.Descending
+        };
+
+        var result = await Sender.Send(new GetAllUsersQuery(filter), cancellationToken);
+        if (!result.IsSuccess)
+            return new TableData<UserDto> { TotalItems = 0, Items = [] };
+
+        return new TableData<UserDto>
+        {
+            TotalItems = result.Value.TotalCount,
+            Items = result.Value.Items
+        };
     }
 
-    private void AbrirDialogoNuevoUsuario() => _dialogVisible = true;
-    private void EditarUsuario(UserDto usuario) => _dialogVisible = true; // TODO: cargar datos
-    private async Task DesactivarUsuario(Guid id)
+
+    private async Task OpenNewUser()
+    {
+        var parameters = new DialogParameters
+        {
+            { "User", new UserDto() },
+            { "EditMode", false }
+        };
+
+        var dialog = await DialogService.ShowAsync<UserForm>("Nuevo Usuario", parameters);
+        var result = await dialog.Result;
+
+        if (!result!.Canceled)
+            await ReloadTable();
+    }
+
+    private async Task OpenUserEdition(UserDto user)
+    {
+        var parameters = new DialogParameters
+        {
+            { "User", user },
+            { "EditMode", true }
+        };
+
+        var dialog = await DialogService.ShowAsync<UserForm>("Editar Usuario", parameters);
+        var result = await dialog.Result;
+
+        if (!result!.Canceled)
+            await ReloadTable();
+    }
+
+    private async Task DeactivateUser(Guid id)
     {
         await Sender.Send(new DisableUserCommand(id));
-        _usuarios.RemoveAll(u => u.Id == id);
+        await ReloadTable();
+    }
+
+    private async Task ReloadTable()
+    {
+        if (_table is not null)
+        await _table.ReloadServerData();
     }
 }

@@ -9,9 +9,12 @@
   <ItemGroup>
     <Folder Include="Common\" />
     <Folder Include="Events\" />
-    <Folder Include="Exceptions\" />
     <Folder Include="Interfaces\" />
     <Folder Include="ValueObjects\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SACO.SharedKernel\SACO.SharedKernel.csproj" />
   </ItemGroup>
 
 </Project>
