@@ -24,7 +24,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Abstractions\Auth\" />
       <Folder Include="Abstractions\Data\" />
       <Folder Include="Features\AuditLogs\" />
       <Folder Include="Features\Circulations\Commands\" />
