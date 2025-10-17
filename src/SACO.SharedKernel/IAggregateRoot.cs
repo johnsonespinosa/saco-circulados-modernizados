@@ -1,6 +1,3 @@
 namespace SACO.SharedKernel;
 
-public interface IAggregateRoot
-{
-    
-}
+public interface IAggregateRoot;
