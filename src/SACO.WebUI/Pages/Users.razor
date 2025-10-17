@@ -1,0 +1,55 @@
+@page "/usuarios"
+@using MediatR
+@using SACO.Application.Features.Users.DTOs
+@inject ISender Sender
+
+<RoleGuard RolesPermitidos="Supervisor">
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.h5">Gestión de Usuarios</MudText>
+        <MudDivider Class="my-2" />
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AbrirDialogoNuevoUsuario">Nuevo Usuario</MudButton>
+
+        <MudTable Items="_usuarios" Hover="true" Dense="true" Class="mt-4">
+            <HeaderContent>
+                <MudTh>Usuario</MudTh>
+                <MudTh>Rol</MudTh>
+                <MudTh>Estado</MudTh>
+                <MudTh>Acciones</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.UserName</MudTd>
+                <MudTd>@context.Rol</MudTd>
+                <MudTd>@context.Status</MudTd>
+                <MudTd>
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" OnClick="@(() => EditarUsuario(context))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DesactivarUsuario(context.Id))" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+
+    <MudDialog @bind-IsVisible="_dialogVisible">
+        <!-- Aquí irá el formulario de creación/edición -->
+    </MudDialog>
+</RoleGuard>
+
+@code {
+    private List<UserDto> _usuarios = new();
+    private bool _dialogVisible = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await Sender.Send(new GetAllUsersQuery());
+        if (result.IsSuccess)
+            _usuarios = result.Value;
+    }
+
+    private void AbrirDialogoNuevoUsuario() => _dialogVisible = true;
+    private void EditarUsuario(UserDto usuario) => _dialogVisible = true; // TODO: cargar datos
+    private async Task DesactivarUsuario(Guid id)
+    {
+        await Sender.Send(new DisableUserCommand(id));
+        _usuarios.RemoveAll(u => u.Id == id);
+    }
+}
