@@ -6,7 +6,7 @@ using SACO.SharedKernel;
 
 namespace SACO.Application.Features.Users.Commands.Login;
 
-internal sealed class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResultDto>
+internal sealed class LoginCommandHandler : ICommandHandler<LoginCommand, UserDto>
 {
     // Repository simulation
     private static readonly List<User> SimulatedUsers = [
@@ -20,21 +20,26 @@ internal sealed class LoginCommandHandler : ICommandHandler<LoginCommand, LoginR
         }
     ];
 
-    public async Task<Result<LoginResultDto>> Handle(LoginCommand request, CancellationToken cancellationToken)
+    public async Task<Result<UserDto>> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
         var userDb = SimulatedUsers
             .FirstOrDefault(user => user.UserName == request.UserName && user.Status == UserStatus.Activo);
 
         if (userDb is null || !VerifyHash(request.Password, userDb.PasswordHash))
         {
-            return Result.Failure<LoginResultDto>(Error.Problem(
+            return Result.Failure<UserDto>(Error.Problem(
                 code: "Login.Credenciales.Invalidas", 
                 message: "Correo o contraseña incorrectos"));
         }
 
-        var dto = new LoginResultDto(userDb.Id, userDb.UserName, userDb.Rol.ToString());
+        return Result.Success(new UserDto
+        {
+            Id = userDb.Id,
+            UserName = userDb.UserName,
+            Rol = userDb.Rol.ToString(),
+            Status = userDb.Status.ToString()
+        });
 
-        return Result.Success(dto);
     }
 
     private static string Hash(string password) => $"hashed:{password}";
