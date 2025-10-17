@@ -1,8 +1,9 @@
-@using MediatR
 @using SACO.Application.Features.Users.Commands.CreateUser
-@using SACO.Application.Features.Users.Commands.UpdateUser
 @using SACO.Application.Features.Users.DTOs
-@inject ISender Sender
+@using SACO.SharedKernel
+@using SACO.WebUI.Services
+@inject UserApiClient ApiClient
+
 
 <MudDialog>
     <DialogContent>
@@ -48,32 +49,31 @@
     private async Task Save()
     {
         _error = null;
-
         await _form.Validate();
         if (!_form.IsValid)
             return;
 
+        Result result;
+
         if (EditMode)
         {
-            var result = await Sender.Send(new UpdateUserCommand(User.Id, User.UserName, User.Rol));
-            if (!result.IsSuccess)
-            {
-                _error = result.Error.Message;
-                return;
-            }
+            result = await ApiClient.UpdateUserAsync(User);
         }
         else
         {
-            var result = await Sender.Send(new CreateUserCommand(User.UserName, User.Password, User.Rol));
-            if (!result.IsSuccess)
-            {
-                _error = result.Error.Message;
-                return;
-            }
+            var command = new CreateUserCommand(User.UserName, User.Password, User.Rol);
+            result = await ApiClient.CreateUserAsync(command);
+        }
+
+        if (!result.IsSuccess)
+        {
+            _error = result.Error.Message;
+            return;
         }
 
         Dialog.Close(DialogResult.Ok(true));
     }
+
 
     private void Cancel() => Dialog.Cancel();
 }

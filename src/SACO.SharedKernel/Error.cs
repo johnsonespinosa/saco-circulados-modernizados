@@ -7,7 +7,8 @@ public record Error(string Code, string Message, ErrorType Type)
         Code: "General.Null",
         Message: "Null value was provided",
         ErrorType.Failure);
-
+    
+    public static readonly Error Connection = Failure("General.Connection", "Error de conexión con el servidor");
     public static Error Failure(string code, string message) =>
         new(code, Message: message, ErrorType.Failure);
 

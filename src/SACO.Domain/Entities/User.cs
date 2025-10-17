@@ -1,9 +1,10 @@
+using SACO.Domain.Common;
 using SACO.Domain.Enums;
 using SACO.SharedKernel;
 
 namespace SACO.Domain.Entities;
 
-public sealed class User : IAggregateRoot
+public sealed class User : AuditableEntity, IAggregateRoot
 {
     public Guid Id { get; set; }
     public string UserName { get; set; } = string.Empty;
