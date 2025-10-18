@@ -11,7 +11,10 @@ public sealed class User : AuditableEntity, IAggregateRoot
     public string PasswordHash { get; set; } = string.Empty;
     public UserRol Rol { get; set; } = UserRol.Operador;
     public UserStatus Status { get; set; } = UserStatus.Activo;
-    
+
+    private readonly List<UserPermission> _userPermissions = [];
+    public ICollection<UserPermission> Permissions => _userPermissions.AsReadOnly();
+
     private User() { }
     
     internal User(string userName, string passwordHash, UserRol rol)

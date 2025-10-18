@@ -1,11 +1,26 @@
+using Microsoft.EntityFrameworkCore;
+using SACO.Application.Abstractions.Auth;
+using SACO.Application.Abstractions.Data;
+
 namespace SACO.Infrastructure.Auth;
 
-internal sealed class PermissionProvider
+internal sealed class PermissionProvider(IApplicationDbContext dbContext)
+    : IPermissionProvider
 {
-    public Task<HashSet<string>> GetForUserIdAsync(Guid userId)
+    public async Task<HashSet<string>> GetForUserIdAsync(Guid userId)
     {
-        HashSet<string> permissionsSet = [];
+        var userDb = await dbContext.Users
+            .Include(navigationPropertyPath: user => user.Permissions)
+            .ThenInclude(userPermission => userPermission.Permission)
+            .FirstOrDefaultAsync(user => user.Id == userId);
 
-        return Task.FromResult(permissionsSet);
+        if (userDb is null)
+            return [];
+
+        var permissions = userDb.Permissions
+            .Select(userPermission => userPermission.Permission.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return permissions;
     }
 }
