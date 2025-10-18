@@ -1,0 +1,105 @@
+@page "/usuarios"
+@using SACO.Application.Features.Users.DTOs
+@using SACO.WebUI.Components.Users
+@using SACO.WebUI.Services
+@inject UserApiClient ApiClient
+@inject IDialogService DialogService
+
+<RoleGuard RolesPermitidos="Supervisor">
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.h5">Gestión de Usuarios</MudText>
+        <MudDivider Class="my-2" />
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenNewUser">Nuevo Usuario</MudButton>
+
+        <MudTextField @bind-Value="_search" Placeholder="Buscar usuario..." Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" Class="mt-4 mb-2" Immediate="true" OnBlur="ReloadTable" />
+
+        <MudTable @ref="_table" ServerData="LoadServerData" Hover="true" Dense="true" Class="mt-2" RowsPerPage="10">
+            <HeaderContent>
+                <MudTh>Usuario</MudTh>
+                <MudTh>Rol</MudTh>
+                <MudTh>Estado</MudTh>
+                <MudTh>Acciones</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.UserName</MudTd>
+                <MudTd>@context.Rol</MudTd>
+                <MudTd>@context.Status</MudTd>
+                <MudTd>
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" OnClick="@(() => OpenUserEdition(context))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DeactivateUser(context.Id))" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+</RoleGuard>
+
+@code {
+    private string? _search;
+    private MudTable<UserDto>? _table;
+
+    private async Task<TableData<UserDto>> LoadServerData(TableState state, CancellationToken cancellationToken)
+    {
+        var filter = new UserFilterDto
+        {
+            Search = _search,
+            Page = state.Page + 1,
+            PageSize = state.PageSize,
+            SortBy = state.SortLabel,
+            Descending = state.SortDirection == SortDirection.Descending
+        };
+
+        var result = await ApiClient.GetUsersAsync(filter);
+        if (result is null)
+            return new TableData<UserDto> { TotalItems = 0, Items = [] };
+
+        return new TableData<UserDto>
+        {
+            TotalItems = result.TotalCount,
+            Items = result.Items
+        };
+    }
+
+
+    private async Task OpenNewUser()
+    {
+        var parameters = new DialogParameters
+        {
+            { "User", new UserDto() },
+            { "EditMode", false }
+        };
+
+        var dialog = await DialogService.ShowAsync<UserForm>("Nuevo Usuario", parameters);
+        var result = await dialog.Result;
+
+        if (!result!.Canceled)
+            await ReloadTable();
+    }
+
+    private async Task OpenUserEdition(UserDto user)
+    {
+        var parameters = new DialogParameters
+        {
+            { "User", user },
+            { "EditMode", true }
+        };
+
+        var dialog = await DialogService.ShowAsync<UserForm>("Editar Usuario", parameters);
+        var result = await dialog.Result;
+
+        if (!result!.Canceled)
+            await ReloadTable();
+    }
+
+    private async Task DeactivateUser(Guid id)
+    {
+        await ApiClient.DisableUserAsync(id);
+        await ReloadTable();
+    }
+
+    private async Task ReloadTable()
+    {
+        if (_table is not null)
+        await _table.ReloadServerData();
+    }
+}

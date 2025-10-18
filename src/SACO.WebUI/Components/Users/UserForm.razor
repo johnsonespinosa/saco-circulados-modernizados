@@ -1,0 +1,79 @@
+@using SACO.Application.Features.Users.Commands.CreateUser
+@using SACO.Application.Features.Users.DTOs
+@using SACO.SharedKernel
+@using SACO.WebUI.Services
+@inject UserApiClient ApiClient
+
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6">@(EditMode ? "Editar Usuario" : "Nuevo Usuario")</MudText>
+        <MudDivider Class="my-2" />
+
+        <MudForm @ref="_form">
+            <MudTextField @bind-Value="User.UserName" Label="Usuario" Required="true" For="@(() => User.UserName)" />
+
+            @if (!EditMode)
+            {
+                <MudTextField @bind-Value="User.Password" Label="Contraseña" InputType="InputType.Password" Required="true" For="@(() => User.Password)" />
+            }
+
+            <MudSelect T="string" Label="Rol" @bind-Value="User.Rol" Required="true">
+                @foreach (var rol in new[] { "Supervisor", "Inspector", "Operador" })
+                {
+                    <MudSelectItem Value="@rol">@rol</MudSelectItem>
+                }
+            </MudSelect>
+        </MudForm>
+
+        @if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <MudAlert Severity="Severity.Error" Elevation="0" Class="mt-2">@_error</MudAlert>
+        }
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Save" Color="Color.Primary">@(EditMode ? "Actualizar" : "Crear")</MudButton>
+        <MudButton OnClick="Cancel" Color="Color.Secondary">Cancelar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance Dialog { get; set; } = default!;
+    [Parameter] public UserDto User { get; set; } = new();
+    [Parameter] public bool EditMode { get; set; }
+
+    private MudForm _form = new();
+    private string? _error;
+
+    private async Task Save()
+    {
+        _error = null;
+        await _form.Validate();
+        if (!_form.IsValid)
+            return;
+
+        Result result;
+
+        if (EditMode)
+        {
+            result = await ApiClient.UpdateUserAsync(User);
+        }
+        else
+        {
+            var command = new CreateUserCommand(User.UserName, User.Password, User.Rol);
+            result = await ApiClient.CreateUserAsync(command);
+        }
+
+        if (!result.IsSuccess)
+        {
+            _error = result.Error.Message;
+            return;
+        }
+
+        Dialog.Close(DialogResult.Ok(true));
+    }
+
+
+    private void Cancel() => Dialog.Cancel();
+}

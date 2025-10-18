@@ -9,8 +9,8 @@ internal static class ClaimsPrincipalExtensions
     {
         var userId = principal?.FindFirstValue(JwtRegisteredClaimNames.Sub);
 
-        return Guid.TryParse(userId, out var parsedUserId) ?
-            parsedUserId :
-            throw new ApplicationException("User id is unavailable");
+        return Guid.TryParse(userId, out var parsedUserId)
+            ? parsedUserId
+            : throw new InvalidOperationException("User id is unavailable");
     }
 }
